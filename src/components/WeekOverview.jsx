@@ -53,16 +53,14 @@ export default function WeekOverview({ palette, d, weekTotal, categoryStats, com
       </div>
 
       {/* Percentage */}
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 16 }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 14 }}>
         <span style={{
           fontFamily: "'Instrument Serif', serif",
           fontSize: 38, color: palette.bg, lineHeight: 1,
         }}>
           {pct.toFixed(1)}%
         </span>
-        <span style={{ fontSize: 12, color: palette.inkSoft, maxWidth: 80, lineHeight: 1.4 }}>
-          progress from completing all the tasks
-        </span>
+        <span style={{ fontSize: 12, color: palette.inkSoft }}>complete</span>
       </div>
 
       {/* By category */}

@@ -34,8 +34,9 @@ export default function ReminderSheet({ palette, d, persona, tomorrowInfo, onClo
   return (
     <div style={{
       position: 'absolute', inset: 0, zIndex: 300,
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      padding: `${d.pad}px`,
+      display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
+      padding: `12px ${d.pad}px ${d.pad}px`,
+      paddingTop: 'max(12px, env(safe-area-inset-top, 12px))',
     }}>
       {/* Scrim — tap outside does nothing (must-engage) */}
       <div style={{
