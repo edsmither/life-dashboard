@@ -14,6 +14,12 @@ export function getTodayInfo() {
   }
 }
 
+export function addDays(dateISO, n) {
+  const d = new Date(dateISO + 'T12:00:00')
+  d.setDate(d.getDate() + n)
+  return d.toISOString().slice(0, 10)
+}
+
 export function getTomorrowInfo() {
   const d = new Date()
   d.setDate(d.getDate() + 1)
@@ -23,33 +29,46 @@ export function getTomorrowInfo() {
     dayNum: d.getDate(),
     dateLabel: `${DAY_NAMES[d.getDay()]}, ${MONTH_NAMES[d.getMonth()]} ${d.getDate()}`,
     shortLabel: `${DAY_NAMES[d.getDay()].slice(0, 3)} · ${MONTH_SHORT[d.getMonth()]} ${d.getDate()}`,
+    dateISO: addDays(new Date().toISOString().slice(0, 10), 1),
   }
 }
 
-// Returns Mon–Sun week containing today, with dot counts informed by todayTaskCount
-export function getCurrentWeek(todayISO, todayTaskCount = 0) {
+export function getWeekBounds(todayISO) {
   const today = new Date(todayISO + 'T12:00:00')
-  const dow = today.getDay() // 0=Sun
+  const dow = today.getDay()
   const mondayOffset = dow === 0 ? -6 : 1 - dow
+  const mon = new Date(today); mon.setDate(today.getDate() + mondayOffset)
+  const sun = new Date(today); sun.setDate(today.getDate() + mondayOffset + 6)
+  return {
+    weekStartISO: mon.toISOString().slice(0, 10),
+    weekEndISO: sun.toISOString().slice(0, 10),
+  }
+}
 
-  // Sample dot fills for past/future days so the strip looks alive
-  const sampleDots =  [2, 3, 1, 2, 0, 2, 1]
-  const sampleDone =  [1, 2, 1, 1, 0, 0, 0]
+export function formatDayLabel(dateISO, tomorrowISO) {
+  if (dateISO === tomorrowISO) return 'Tomorrow'
+  const d = new Date(dateISO + 'T12:00:00')
+  return `${DAY_NAMES[d.getDay()].slice(0, 3)} · ${MONTH_SHORT[d.getMonth()]} ${d.getDate()}`
+}
+
+// Returns Mon–Sun of the current week with dot counts from actual task data
+export function getCurrentWeek(todayISO, tasks = []) {
+  const today = new Date(todayISO + 'T12:00:00')
+  const dow = today.getDay()
+  const mondayOffset = dow === 0 ? -6 : 1 - dow
 
   return DAY_LETTERS.map((letter, i) => {
     const d = new Date(today)
     d.setDate(today.getDate() + mondayOffset + i)
     const iso = d.toISOString().slice(0, 10)
     const isToday = iso === todayISO
-    const isPast = d < today
-
+    const dayTasks = tasks.filter(t => t.dateISO === iso)
     return {
       letter,
       num: d.getDate(),
-      monthShort: MONTH_SHORT[d.getMonth()],
       isToday,
-      dots: isToday ? Math.min(todayTaskCount, 3) : sampleDots[i],
-      doneDots: isToday ? 0 : (isPast ? sampleDone[i] : 0),
+      dots: Math.min(dayTasks.length, 3),
+      doneDots: Math.min(dayTasks.filter(t => t.done).length, 3),
     }
   })
 }
@@ -61,8 +80,6 @@ export function getWeekRangeLabel(todayISO) {
   const mon = new Date(today); mon.setDate(today.getDate() + mondayOffset)
   const sun = new Date(today); sun.setDate(today.getDate() + mondayOffset + 6)
   const sameMonth = mon.getMonth() === sun.getMonth()
-  if (sameMonth) {
-    return `${MONTH_SHORT[mon.getMonth()]} ${mon.getDate()}–${sun.getDate()}`
-  }
+  if (sameMonth) return `${MONTH_SHORT[mon.getMonth()]} ${mon.getDate()}–${sun.getDate()}`
   return `${MONTH_SHORT[mon.getMonth()]} ${mon.getDate()} – ${MONTH_SHORT[sun.getMonth()]} ${sun.getDate()}`
 }

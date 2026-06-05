@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { INITIAL_DATA } from '../data/appData'
 
 const SNOOZE_OPTIONS = [
   { label: '30 min', time: '30 minutes' },
@@ -15,7 +14,7 @@ const CONFIRMATIONS = {
   got: 'Lovely — nothing more from me.',
 }
 
-export default function ReminderSheet({ palette, d, persona, tomorrowInfo, onClose }) {
+export default function ReminderSheet({ palette, d, persona, tomorrowInfo, tomorrowItems = [], onClose }) {
   const [packed, setPacked] = useState({})
   const [snoozeOpen, setSnoozeOpen] = useState(false)
   const [confirmed, setConfirmed] = useState(null)
@@ -152,12 +151,12 @@ export default function ReminderSheet({ palette, d, persona, tomorrowInfo, onClo
                   fontSize: 11, fontWeight: 700, color: accent,
                   background: accent + '18', padding: '3px 10px', borderRadius: 99,
                 }}>
-                  {INITIAL_DATA.tomorrowItems.length} things
+                  {tomorrowItems.length} things
                 </span>
               </div>
 
               {/* Checklist */}
-              {INITIAL_DATA.tomorrowItems.map(item => (
+              {tomorrowItems.map(item => (
                 <div
                   key={item.id}
                   onClick={() => togglePack(item.id)}
