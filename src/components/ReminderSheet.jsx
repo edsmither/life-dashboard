@@ -15,7 +15,7 @@ const CONFIRMATIONS = {
   got: 'Lovely — nothing more from me.',
 }
 
-export default function ReminderSheet({ palette, d, persona, onClose }) {
+export default function ReminderSheet({ palette, d, persona, tomorrowInfo, onClose }) {
   const [packed, setPacked] = useState({})
   const [snoozeOpen, setSnoozeOpen] = useState(false)
   const [confirmed, setConfirmed] = useState(null)
@@ -34,32 +34,27 @@ export default function ReminderSheet({ palette, d, persona, onClose }) {
   return (
     <div style={{
       position: 'absolute', inset: 0, zIndex: 300,
-      display: 'flex', flexDirection: 'column', justifyContent: 'flex-end',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      padding: `${d.pad}px`,
     }}>
-      {/* Scrim */}
-      <div
-        style={{
-          position: 'absolute', inset: 0,
-          background: palette.scrim,
-          animation: 'fadeIn 0.25s ease',
-        }}
-      />
-
-      {/* Sheet */}
+      {/* Scrim — tap outside does nothing (must-engage) */}
       <div style={{
-        position: 'relative',
+        position: 'absolute', inset: 0,
+        background: palette.scrim,
+        animation: 'fadeIn 0.25s ease',
+      }} />
+
+      {/* Centered popup card */}
+      <div style={{
+        position: 'relative', width: '100%',
         background: palette.surface,
-        borderRadius: '24px 24px 0 0',
+        borderRadius: 24,
         padding: `${d.pad}px`,
         boxShadow: palette.shadowLg,
-        animation: 'slideUp 0.32s cubic-bezier(.2,.7,.2,1)',
-        maxHeight: '85dvh',
+        animation: 'popIn 0.3s cubic-bezier(.2,.7,.2,1)',
+        maxHeight: '88dvh',
         overflowY: 'auto',
       }}>
-        {/* Drag handle */}
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
-          <div style={{ width: 36, height: 4, borderRadius: 99, background: palette.line }} />
-        </div>
 
         {confirmed ? (
           /* Confirmation state */
@@ -150,7 +145,7 @@ export default function ReminderSheet({ palette, d, persona, onClose }) {
                   <div style={{ fontSize: 10, fontWeight: 700, color: palette.inkMute, letterSpacing: '0.16em' }}>
                     TOMORROW BRIEF
                   </div>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: palette.ink }}>Friday, May 22</div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: palette.ink }}>{tomorrowInfo?.dateLabel}</div>
                 </div>
                 <span style={{
                   fontSize: 11, fontWeight: 700, color: accent,

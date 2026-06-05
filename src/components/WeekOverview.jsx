@@ -1,4 +1,4 @@
-export default function WeekOverview({ palette, d, weekTotal, categoryStats, completedToday, tasks }) {
+export default function WeekOverview({ palette, d, weekTotal, categoryStats, completedToday, tasks, weekRange }) {
   const { expected, completed } = weekTotal
   const liveCompleted = completed - (tasks.filter(t => !t.done).length === tasks.length ? 0 : completedToday)
   const pct = expected > 0 ? Math.round((liveCompleted / expected) * 1000) / 10 : 0
@@ -18,7 +18,7 @@ export default function WeekOverview({ palette, d, weekTotal, categoryStats, com
         <span style={{ fontSize: 10, fontWeight: 700, color: palette.inkMute, letterSpacing: '0.18em' }}>
           WEEK OVERVIEW
         </span>
-        <span style={{ fontSize: 11, color: palette.inkMute }}>May 19–25</span>
+        <span style={{ fontSize: 11, color: palette.inkMute }}>{weekRange}</span>
       </div>
 
       {/* Expected / Completed counts */}

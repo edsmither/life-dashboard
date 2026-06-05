@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { fmt } from '../data/appData'
 
 const catColors = {
@@ -16,67 +16,155 @@ function SortIcon({ active, dir }) {
   )
 }
 
-function TaskRow({ task, toggleTask, palette, persona }) {
+function TaskRow({ task, toggleTask, deleteTask, palette, persona }) {
   const color = catColors[task.cat] || palette.accent
   const timeLabel = task.time || (task.dueByEOD ? 'EOD' : '—')
+  const [swipeX, setSwipeX] = useState(0)
+  const touchStartX = useRef(null)
+  const THRESHOLD = 60
+
+  function onTouchStart(e) {
+    touchStartX.current = e.touches[0].clientX
+  }
+  function onTouchMove(e) {
+    const dx = e.touches[0].clientX - touchStartX.current
+    if (dx < 0) setSwipeX(Math.max(dx, -THRESHOLD - 20))
+  }
+  function onTouchEnd() {
+    if (swipeX < -THRESHOLD / 2) setSwipeX(-THRESHOLD)
+    else setSwipeX(0)
+    touchStartX.current = null
+  }
+
+  const revealed = swipeX <= -THRESHOLD / 2
 
   return (
-    <tr
-      style={{ opacity: task.done ? 0.55 : 1, transition: 'opacity 0.15s' }}
-      onClick={() => toggleTask(task.id)}
-    >
-      <td style={{ padding: '10px 4px 10px 0', width: 44 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+    <tr style={{ position: 'relative', opacity: task.done ? 0.55 : 1, transition: 'opacity 0.15s' }}>
+      {/* Delete zone (revealed on swipe-left) */}
+      <td
+        colSpan={5}
+        style={{ padding: 0, position: 'relative', overflow: 'hidden' }}
+      >
+        <div style={{ position: 'relative', overflow: 'hidden' }}>
+          {/* Red delete background */}
           <div style={{
-            width: 20, height: 20, borderRadius: '50%', flexShrink: 0, cursor: 'pointer',
-            border: `2px solid ${task.done ? color : palette.line}`,
-            background: task.done ? color : 'transparent',
+            position: 'absolute', right: 0, top: 0, bottom: 0,
+            width: THRESHOLD + 20,
+            background: '#e05555',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            transition: 'all 0.15s',
+            borderRadius: '0 8px 8px 0',
           }}>
-            {task.done && (
-              <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
-                <path d="M2 6l3 3 5-5" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            )}
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+              <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
           </div>
-          <span style={{ fontSize: 11, color: palette.inkSoft, fontWeight: 600 }}>{timeLabel}</span>
+
+          {/* Row content — slides left on swipe */}
+          <div
+            style={{
+              display: 'flex', alignItems: 'center',
+              transform: `translateX(${swipeX}px)`,
+              transition: touchStartX.current ? 'none' : 'transform 0.2s ease',
+              background: palette.surface,
+              cursor: 'pointer',
+            }}
+            onClick={() => { if (!revealed) toggleTask(task.id) }}
+            onTouchStart={onTouchStart}
+            onTouchMove={onTouchMove}
+            onTouchEnd={onTouchEnd}
+          >
+            {/* Circle + time */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '10px 4px 10px 0', minWidth: 68, flexShrink: 0 }}>
+              <div
+                style={{
+                  width: 20, height: 20, borderRadius: '50%', flexShrink: 0,
+                  border: `2px solid ${task.done ? color : palette.line}`,
+                  background: task.done ? color : 'transparent',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  transition: 'all 0.15s',
+                }}
+              >
+                {task.done && (
+                  <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
+                    <path d="M2 6l3 3 5-5" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                )}
+              </div>
+              <span style={{ fontSize: 11, color: palette.inkSoft, fontWeight: 600, whiteSpace: 'nowrap' }}>{timeLabel}</span>
+            </div>
+
+            {/* Date */}
+            <div style={{ fontSize: 11, color: palette.inkMute, padding: '10px 4px', minWidth: 32, flexShrink: 0 }}>
+              {task.dateISO ? task.dateISO.slice(5).replace('-', '/') : ''}
+            </div>
+
+            {/* Description */}
+            <div style={{ flex: 1, padding: '10px 4px', minWidth: 0 }}>
+              <div style={{
+                fontSize: 13, fontWeight: 600, color: palette.ink,
+                textDecoration: task.done ? 'line-through' : 'none',
+                whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+              }}>
+                {fmt(task.title, persona)}
+              </div>
+              <div style={{
+                fontSize: 11, color: palette.inkMute,
+                whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+              }}>
+                {task.sub}
+              </div>
+            </div>
+
+            {/* Category pill + delete button */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '10px 0 10px 4px', flexShrink: 0 }}>
+              <span style={{
+                fontSize: 10, fontWeight: 700, color,
+                background: color + '18',
+                padding: '2px 7px', borderRadius: 99,
+                textTransform: 'uppercase', letterSpacing: '0.06em',
+                whiteSpace: 'nowrap',
+              }}>
+                {task.cat}
+              </span>
+              <button
+                onClick={e => { e.stopPropagation(); deleteTask(task.id) }}
+                style={{
+                  width: 24, height: 24, borderRadius: '50%', flexShrink: 0,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  background: 'none', border: 'none', cursor: 'pointer',
+                  color: palette.inkMute, opacity: 0.6,
+                  transition: 'opacity 0.15s, color 0.15s',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.opacity = 1; e.currentTarget.style.color = '#e05555' }}
+                onMouseLeave={e => { e.currentTarget.style.opacity = 0.6; e.currentTarget.style.color = palette.inkMute }}
+                aria-label="Delete task"
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+                  <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          {/* Swipe-delete confirm tap */}
+          {revealed && (
+            <button
+              onClick={() => deleteTask(task.id)}
+              style={{
+                position: 'absolute', right: 0, top: 0, bottom: 0,
+                width: THRESHOLD + 20,
+                background: 'transparent', border: 'none', cursor: 'pointer',
+              }}
+              aria-label="Confirm delete"
+            />
+          )}
         </div>
-      </td>
-      <td style={{ padding: '10px 4px', fontSize: 11, color: palette.inkMute, width: 32 }}>
-        {task.dateISO ? task.dateISO.slice(5).replace('-', '/') : ''}
-      </td>
-      <td style={{ padding: '10px 4px', maxWidth: 140 }}>
-        <div style={{
-          fontSize: 13, fontWeight: 600, color: palette.ink,
-          textDecoration: task.done ? 'line-through' : 'none',
-          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-        }}>
-          {fmt(task.title, 'Ava')}
-        </div>
-        <div style={{
-          fontSize: 11, color: palette.inkMute,
-          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-        }}>
-          {task.sub}
-        </div>
-      </td>
-      <td style={{ padding: '10px 0 10px 4px', textAlign: 'right' }}>
-        <span style={{
-          fontSize: 10, fontWeight: 700, color,
-          background: color + '18',
-          padding: '2px 7px', borderRadius: 99,
-          textTransform: 'uppercase', letterSpacing: '0.06em',
-          whiteSpace: 'nowrap',
-        }}>
-          {task.cat}
-        </span>
       </td>
     </tr>
   )
 }
 
-export default function TodayTable({ tasks, toggleTask, palette, d, persona }) {
+export default function TodayTable({ tasks, toggleTask, deleteTask, palette, d, persona }) {
   const [sortBy, setSortBy] = useState('time')
   const [dir, setDir] = useState('asc')
   const [hideDone, setHideDone] = useState(false)
@@ -171,7 +259,7 @@ export default function TodayTable({ tasks, toggleTask, palette, d, persona }) {
         <tbody style={{ borderTop: `1px solid ${palette.line}` }}>
           {sorted.map(task => (
             <TaskRow
-              key={task.id} task={task} toggleTask={toggleTask}
+              key={task.id} task={task} toggleTask={toggleTask} deleteTask={deleteTask}
               palette={palette} persona={persona}
             />
           ))}

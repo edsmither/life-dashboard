@@ -53,7 +53,7 @@ function CollapsibleSection({ id, title, defaultOpen = true, children, palette, 
   )
 }
 
-function TomorrowBriefCard({ palette, d, persona, onOpen }) {
+function TomorrowBriefCard({ palette, d, persona, tomorrowInfo, onOpen }) {
   return (
     <div
       onClick={onOpen}
@@ -71,7 +71,7 @@ function TomorrowBriefCard({ palette, d, persona, onOpen }) {
           <div style={{ fontSize: 10, fontWeight: 700, color: palette.accent || '#6b8e6e', letterSpacing: '0.18em', marginBottom: 4 }}>
             TOMORROW BRIEF
           </div>
-          <div style={{ fontSize: 12, color: palette.inkSoft, letterSpacing: '0.04em' }}>Fri · May 22</div>
+          <div style={{ fontSize: 12, color: palette.inkSoft, letterSpacing: '0.04em' }}>{tomorrowInfo?.shortLabel}</div>
         </div>
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
           <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"
@@ -194,7 +194,7 @@ function UpcomingSection({ upcoming, palette, d }) {
   )
 }
 
-export default function Home({ palette, d, persona, mode, tasks, toggleTask, completedToday, data, onOpenVoice, onOpenSchool, onOpenReminder }) {
+export default function Home({ palette, d, persona, mode, tasks, toggleTask, deleteTask, completedToday, data, todayInfo, tomorrowInfo, weekDays, weekRange, onOpenVoice, onOpenSchool, onOpenReminder }) {
   const totalToday = tasks.length
 
   return (
@@ -208,22 +208,22 @@ export default function Home({ palette, d, persona, mode, tasks, toggleTask, com
           TODAY IS
         </div>
         <div style={{ fontSize: d.titleSize + 4, fontWeight: 700, color: palette.ink, lineHeight: 1.1 }}>
-          Thursday,{' '}
+          {todayInfo.dayName},{' '}
           <span style={{
             fontFamily: "'Instrument Serif', serif",
             fontStyle: 'italic',
             color: palette.accent,
           }}>
-            May 21
+            {todayInfo.monthName} {todayInfo.dayNum}
           </span>
         </div>
       </div>
 
       {/* Week strip */}
-      <WeekStrip days={data.weekDays} palette={palette} d={d} />
+      <WeekStrip days={weekDays} palette={palette} d={d} />
 
       {/* Tomorrow brief card */}
-      <TomorrowBriefCard palette={palette} d={d} persona={persona} onOpen={onOpenReminder} />
+      <TomorrowBriefCard palette={palette} d={d} persona={persona} tomorrowInfo={tomorrowInfo} onOpen={onOpenReminder} />
 
       {/* Week overview */}
       <div style={{ margin: `0 ${d.pad}px ${d.gap}px` }}>
@@ -233,6 +233,7 @@ export default function Home({ palette, d, persona, mode, tasks, toggleTask, com
           categoryStats={data.categoryStats}
           completedToday={completedToday}
           tasks={tasks}
+          weekRange={weekRange}
         />
       </div>
 
@@ -250,7 +251,7 @@ export default function Home({ palette, d, persona, mode, tasks, toggleTask, com
             {totalToday - completedToday} to go
           </span>
         </div>
-        <TodayTable tasks={tasks} toggleTask={toggleTask} palette={palette} d={d} persona={persona} />
+        <TodayTable tasks={tasks} toggleTask={toggleTask} deleteTask={deleteTask} palette={palette} d={d} persona={persona} />
       </div>
 
       {/* Collapsible sections */}
