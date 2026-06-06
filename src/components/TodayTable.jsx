@@ -16,9 +16,10 @@ function SortIcon({ active, dir }) {
   )
 }
 
-function TaskRow({ task, toggleTask, deleteTask, palette, persona }) {
+function TaskRow({ task, toggleTask, deleteTask, palette, persona, categories }) {
   const isGcal = task.source === 'google'
-  const color = catColors[task.cat] || palette.accent
+  const catDef = categories?.find(c => c.id === task.cat)
+  const color = catDef?.color || catColors[task.cat] || palette.accent
   const timeLabel = task.time || (task.dueByEOD ? 'EOD' : '—')
   const [swipeX, setSwipeX] = useState(0)
   const touchStartX = useRef(null)
@@ -70,7 +71,7 @@ function TaskRow({ task, toggleTask, deleteTask, palette, persona }) {
               display: 'flex', alignItems: 'center',
               transform: `translateX(${swipeX}px)`,
               transition: touchStartX.current ? 'none' : 'transform 0.2s ease',
-              background: palette.surface,
+              background: isGcal ? palette.accent + '20' : palette.surface,
               cursor: isGcal ? 'default' : 'pointer',
             }}
             onClick={() => { if (!revealed && !isGcal) toggleTask(task.id) }}
@@ -176,7 +177,7 @@ function TaskRow({ task, toggleTask, deleteTask, palette, persona }) {
   )
 }
 
-export default function TodayTable({ tasks, toggleTask, deleteTask, palette, d, persona }) {
+export default function TodayTable({ tasks, toggleTask, deleteTask, palette, d, persona, categories }) {
   const [sortBy, setSortBy] = useState('time')
   const [dir, setDir] = useState('asc')
   const [hideDone, setHideDone] = useState(false)
@@ -272,7 +273,7 @@ export default function TodayTable({ tasks, toggleTask, deleteTask, palette, d, 
           {sorted.map(task => (
             <TaskRow
               key={task.id} task={task} toggleTask={toggleTask} deleteTask={deleteTask}
-              palette={palette} persona={persona}
+              palette={palette} persona={persona} categories={categories}
             />
           ))}
         </tbody>

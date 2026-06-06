@@ -2,10 +2,6 @@ export default function WeekOverview({ palette, d, weekTotal, categoryStats, wee
   const { expected, completed } = weekTotal
   const pct = expected > 0 ? Math.round((completed / expected) * 1000) / 10 : 0
 
-  const catColors = {
-    medical: '#5b7a91', school: '#6b8e6e', house: '#b78850', personal: '#8a5e7d',
-  }
-
   return (
     <div style={{
       background: palette.ink,
@@ -75,7 +71,7 @@ export default function WeekOverview({ palette, d, weekTotal, categoryStats, wee
         </div>
         {Object.entries(categoryStats).map(([key, stat]) => {
           const catPct = stat.total > 0 ? (stat.done / stat.total) * 100 : 0
-          const color = catColors[key] || palette.accent
+          const color = stat.color || palette.accent
           return (
             <div key={key} style={{ marginBottom: 8 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
@@ -83,7 +79,7 @@ export default function WeekOverview({ palette, d, weekTotal, categoryStats, wee
                   fontSize: 11, fontWeight: 600, color: palette.inkSoft,
                   width: 60, textTransform: 'capitalize',
                 }}>
-                  {key.charAt(0).toUpperCase() + key.slice(1)}
+                  {stat.name || key.charAt(0).toUpperCase() + key.slice(1)}
                 </span>
                 <div style={{ flex: 1, height: 5, borderRadius: 99, background: 'rgba(255,255,255,0.1)' }}>
                   <div style={{

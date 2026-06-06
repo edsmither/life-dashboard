@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { SEED_TASKS, fmt } from './data/appData'
+import { SEED_TASKS, DEFAULT_CATS, fmt } from './data/appData'
 import { resolveTheme, densityScale } from './theme/tokens'
 import {
   getTodayInfo, getTomorrowInfo, addDays,
@@ -9,16 +9,20 @@ import { useGoogleCalendar } from './hooks/useGoogleCalendar'
 import Home from './components/Home'
 import VoiceCapture from './components/VoiceCapture'
 import SchoolDrilldown from './components/SchoolDrilldown'
-import ReminderSheet from './components/ReminderSheet'
+import CategoriesScreen from './components/CategoriesScreen'
 
 const SETTINGS_KEY = 'lifedash.settings'
-const CATS = ['medical', 'school', 'house', 'personal']
-const CAT_LABELS = { medical: 'Medical', school: 'School', house: 'House', personal: 'Personal' }
+const CATS_KEY     = 'lifedash.categories'
 const GCAL_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || ''
 
 function loadSettings() {
   try { return JSON.parse(localStorage.getItem(SETTINGS_KEY)) || {} }
   catch { return {} }
+}
+
+function loadCategories() {
+  try { return JSON.parse(localStorage.getItem(CATS_KEY)) || DEFAULT_CATS }
+  catch { return DEFAULT_CATS }
 }
 
 function seedToTasks() {
@@ -29,12 +33,12 @@ function seedToTasks() {
 export default function App() {
   const saved = loadSettings()
   const [screen, setScreen] = useState('home')
-  const [reminderOpen, setReminderOpen] = useState(false)
-  const [mode] = useState(saved.mode || 'light')
-  const [density] = useState(saved.density || 'compact')
-  const [themeName] = useState(saved.theme || 'sage')
-  const [persona] = useState(saved.persona || 'Ava')
-  const [tasks, setTasks] = useState(seedToTasks)
+  const [mode]      = useState(saved.mode     || 'light')
+  const [density]   = useState(saved.density  || 'compact')
+  const [themeName] = useState(saved.theme    || 'sage')
+  const [persona]   = useState(saved.persona  || 'Ava')
+  const [tasks,      setTasks]      = useState(seedToTasks)
+  const [categories, setCategories] = useState(loadCategories)
 
   const {
     isSignedIn: gCalConnected,
@@ -48,6 +52,7 @@ export default function App() {
   const palette = useMemo(() => resolveTheme(themeName, mode), [themeName, mode])
   const d = densityScale[density]
 
+  // ── Task mutations ───────────────────────────────────────
   function toggleTask(id) {
     setTasks(prev => prev.map(t => t.id === id ? { ...t, done: !t.done } : t))
   }
@@ -55,29 +60,45 @@ export default function App() {
     setTasks(prev => prev.filter(t => t.id !== id))
   }
 
+  // ── Category mutations ───────────────────────────────────
+  function saveCats(updated) {
+    try { localStorage.setItem(CATS_KEY, JSON.stringify(updated)) } catch {}
+    setCategories(updated)
+  }
+  function addCategory(cat) {
+    saveCats([...categories, { ...cat, id: Date.now().toString() }])
+  }
+  function updateCategory(id, updates) {
+    saveCats(categories.map(c => c.id === id ? { ...c, ...updates } : c))
+  }
+  function deleteCategory(id) {
+    saveCats(categories.filter(c => c.id !== id))
+  }
+
+  // ── Date anchors ─────────────────────────────────────────
   const todayInfo    = getTodayInfo()
   const tomorrowInfo = getTomorrowInfo()
   const todayISO     = todayInfo.dateISO
   const tomorrowISO  = tomorrowInfo.dateISO
   const { weekStartISO, weekEndISO } = getWeekBounds(todayISO)
 
-  // Local tasks + Google Calendar events merged for all time-based views
+  // ── Merge local tasks + Google Calendar events ───────────
   const allItems = useMemo(() => [
     ...tasks,
     ...calendarEvents.filter(ev => !tasks.some(t => t.id === ev.id)),
   ], [tasks, calendarEvents])
 
+  // ── Derived views ─────────────────────────────────────────
   const todayTasks    = allItems.filter(t => t.dateISO === todayISO)
-  const tomorrowTasks = allItems.filter(t => t.dateISO === tomorrowISO)
-
-  // Category stats + school drilldown use local tasks only
-  const schoolTasks    = tasks.filter(t => t.cat === 'school')
+  const schoolTasks   = tasks.filter(t => t.cat === 'school')
   const localWeekTasks = tasks.filter(t => t.dateISO >= weekStartISO && t.dateISO <= weekEndISO)
 
   const categoryStats = Object.fromEntries(
-    CATS.map(cat => [cat, {
-      total: localWeekTasks.filter(t => t.cat === cat).length,
-      done:  localWeekTasks.filter(t => t.cat === cat && t.done).length,
+    categories.map(cat => [cat.id, {
+      name:  cat.name,
+      color: cat.color,
+      total: localWeekTasks.filter(t => t.cat === cat.id).length,
+      done:  localWeekTasks.filter(t => t.cat === cat.id && t.done).length,
     }])
   )
   const weekTotal = {
@@ -86,11 +107,12 @@ export default function App() {
   }
 
   const openFutureTasks = allItems.filter(t => t.dateISO >= todayISO && !t.done)
-  const categoryData = CATS.map(cat => {
-    const catTasks = openFutureTasks.filter(t => t.cat === cat)
+  const categoryData = categories.map(cat => {
+    const catTasks = openFutureTasks.filter(t => t.cat === cat.id)
     return {
-      id: cat,
-      name: CAT_LABELS[cat],
+      id: cat.id,
+      name: cat.name,
+      color: cat.color,
       count: catTasks.length,
       preview: catTasks.length === 0
         ? 'All clear'
@@ -106,7 +128,7 @@ export default function App() {
   })
   const upcomingGroups = Object.entries(dateMap)
     .sort(([a], [b]) => (a < b ? -1 : 1))
-    .slice(0, 5)
+    .slice(0, 7)
     .map(([dateISO, dayTasks]) => ({
       dateISO,
       dayLabel: formatDayLabel(dateISO, tomorrowISO),
@@ -114,12 +136,15 @@ export default function App() {
       count: dayTasks.length,
     }))
 
-  const tomorrowItems = tomorrowTasks.map(t => ({ id: t.id, label: fmt(t.title, persona) }))
   const weekDays  = getCurrentWeek(todayISO, allItems)
   const weekRange = getWeekRangeLabel(todayISO)
   const completedToday = todayTasks.filter(t => t.done).length
 
-  const ctx = { palette, d, persona, mode, toggleTask, deleteTask }
+  const taskCounts = Object.fromEntries(
+    categories.map(cat => [cat.id, tasks.filter(t => t.cat === cat.id).length])
+  )
+
+  const ctx = { palette, d, persona, mode, toggleTask, deleteTask, categories }
 
   return (
     <div style={{
@@ -133,6 +158,17 @@ export default function App() {
       {screen === 'school' && (
         <SchoolDrilldown {...ctx} schoolTasks={schoolTasks} todayISO={todayISO} onBack={() => setScreen('home')} />
       )}
+      {screen === 'categories' && (
+        <CategoriesScreen
+          palette={palette} d={d}
+          categories={categories}
+          taskCounts={taskCounts}
+          onAdd={addCategory}
+          onUpdate={updateCategory}
+          onDelete={deleteCategory}
+          onBack={() => setScreen('home')}
+        />
+      )}
       {screen === 'home' && (
         <Home
           {...ctx}
@@ -140,7 +176,6 @@ export default function App() {
           completedToday={completedToday}
           todayInfo={todayInfo}
           tomorrowInfo={tomorrowInfo}
-          tomorrowItems={tomorrowItems}
           weekDays={weekDays}
           weekRange={weekRange}
           weekTotal={weekTotal}
@@ -155,15 +190,7 @@ export default function App() {
           onGCalRefresh={gCalRefresh}
           onOpenVoice={() => setScreen('voice')}
           onOpenSchool={() => setScreen('school')}
-          onOpenReminder={() => setReminderOpen(true)}
-        />
-      )}
-      {reminderOpen && (
-        <ReminderSheet
-          {...ctx}
-          tomorrowInfo={tomorrowInfo}
-          tomorrowItems={tomorrowItems}
-          onClose={() => setReminderOpen(false)}
+          onOpenCategories={() => setScreen('categories')}
         />
       )}
     </div>

@@ -21,34 +21,39 @@ function useCollapsible(id) {
   return [open, toggle]
 }
 
-function CollapsibleSection({ id, title, badge, children, palette, d }) {
+function CollapsibleSection({ id, title, badge, action, children, palette, d }) {
   const [open, toggle] = useCollapsible(id)
   return (
     <div style={{ marginBottom: 4 }}>
-      <button
-        onClick={toggle}
-        style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          width: '100%', padding: `10px ${d.pad}px`, background: 'none', border: 'none',
-          cursor: 'pointer',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: 13, fontWeight: 700, color: palette.ink }}>
-            {title}
-          </span>
-          {badge != null && badge > 0 && (
-            <span style={{
-              fontSize: 10, fontWeight: 700, color: palette.accent,
-              background: palette.accent + '18', padding: '2px 7px', borderRadius: 99,
-            }}>{badge}</span>
-          )}
-        </div>
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"
-          style={{ transform: open ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.25s', flexShrink: 0 }}>
-          <path d="M6 4l4 4-4 4" stroke={palette.inkMute} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-        </svg>
-      </button>
+      <div style={{ display: 'flex', alignItems: 'center' }}>
+        <button
+          onClick={toggle}
+          style={{
+            flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: `10px ${d.pad}px`, background: 'none', border: 'none',
+            cursor: 'pointer',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 13, fontWeight: 700, color: palette.ink }}>{title}</span>
+            {badge != null && badge > 0 && (
+              <span style={{
+                fontSize: 10, fontWeight: 700, color: palette.accent,
+                background: palette.accent + '18', padding: '2px 7px', borderRadius: 99,
+              }}>{badge}</span>
+            )}
+          </div>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"
+            style={{ transform: open ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.25s', flexShrink: 0 }}>
+            <path d="M6 4l4 4-4 4" stroke={palette.inkMute} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </button>
+        {action && (
+          <div style={{ paddingRight: d.pad }}>
+            {action}
+          </div>
+        )}
+      </div>
       <div style={{
         overflow: 'hidden',
         maxHeight: open ? 3000 : 0,
@@ -61,88 +66,74 @@ function CollapsibleSection({ id, title, badge, children, palette, d }) {
   )
 }
 
-function TomorrowBriefCard({ palette, d, persona, tomorrowInfo, tomorrowItems, onOpen }) {
-  const count = tomorrowItems.length
-  const countLabel = count === 0 ? null : count === 1 ? 'One thing' : count === 2 ? 'Two things' : `${count} things`
-
+function GCalStrip({ gcalEnabled, connected, loading, onSignIn, onSignOut, onRefresh, palette, d }) {
+  if (!gcalEnabled) return null
+  const base = { display: 'flex', alignItems: 'center', gap: 6, padding: `0 ${d.pad}px 10px` }
+  if (loading) return (
+    <div style={base}>
+      <div style={{ width: 6, height: 6, borderRadius: '50%', background: palette.accent, opacity: 0.5 }} />
+      <span style={{ fontSize: 11, color: palette.inkMute }}>Syncing calendar…</span>
+    </div>
+  )
+  if (connected) return (
+    <div style={base}>
+      <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#4caf50' }} />
+      <span style={{ fontSize: 11, color: palette.inkMute }}>Google Calendar</span>
+      <button onClick={onRefresh} style={{ marginLeft: 'auto', fontSize: 11, color: palette.inkMute, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+        refresh
+      </button>
+      <span style={{ fontSize: 11, color: palette.line }}>·</span>
+      <button onClick={onSignOut} style={{ fontSize: 11, color: palette.inkMute, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+        disconnect
+      </button>
+    </div>
+  )
   return (
-    <div
-      onClick={onOpen}
-      style={{
-        margin: `0 ${d.pad}px ${d.gap}px`,
-        background: palette.ink,
-        borderRadius: 18,
-        padding: `${d.cardPad}px`,
-        cursor: 'pointer',
-        boxShadow: palette.shadowLg,
-      }}
-    >
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 10 }}>
-        <div>
-          <div style={{ fontSize: 10, fontWeight: 700, color: palette.accent, letterSpacing: '0.18em', marginBottom: 4 }}>
-            TOMORROW BRIEF
-          </div>
-          <div style={{ fontSize: 12, color: palette.inkSoft }}>{tomorrowInfo?.shortLabel}</div>
-        </div>
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-          <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"
-            stroke={palette.bg} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+    <div style={{ padding: `0 ${d.pad}px 12px` }}>
+      <button
+        onClick={onSignIn}
+        style={{
+          display: 'inline-flex', alignItems: 'center', gap: 6,
+          padding: '5px 12px', borderRadius: 99,
+          background: 'none', border: `1px solid ${palette.line}`,
+          cursor: 'pointer', fontSize: 12, fontWeight: 600, color: palette.inkSoft,
+        }}
+      >
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="3" y="4" width="18" height="18" rx="2"/>
+          <path d="M16 2v4M8 2v4M3 10h18"/>
         </svg>
-      </div>
-
-      <div style={{
-        fontFamily: "'Instrument Serif', serif",
-        fontSize: 18, color: palette.bg, lineHeight: 1.35, marginBottom: count > 0 ? 12 : 0,
-      }}>
-        {count === 0
-          ? `All clear for ${persona} tomorrow.`
-          : `${countLabel} for ${persona} — tap to prep.`}
-      </div>
-
-      {count > 0 && (
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          {tomorrowItems.slice(0, 4).map(item => (
-            <span key={item.id} style={{
-              fontSize: 11, fontWeight: 600, color: palette.bg,
-              background: 'rgba(255,255,255,0.15)',
-              padding: '4px 10px', borderRadius: 99,
-            }}>{item.label}</span>
-          ))}
-        </div>
-      )}
+        Connect Google Calendar
+      </button>
     </div>
   )
 }
 
-const CAT_COLORS = { school: '#6b8e6e', medical: '#5b7a91', house: '#b78850', personal: '#8a5e7d' }
-
-function CategoryIcon({ id, color }) {
-  const s = { stroke: color, strokeWidth: 1.8, strokeLinecap: 'round', strokeLinejoin: 'round', fill: 'none' }
+function CategoryIcon({ id }) {
+  const s = { strokeWidth: 1.8, strokeLinecap: 'round', strokeLinejoin: 'round', fill: 'none' }
   if (id === 'school') return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-      <path d="M12 3L2 8l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" {...s}/>
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" {...s}>
+      <path d="M12 3L2 8l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
     </svg>
   )
   if (id === 'medical') return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-      <path d="M12 5v14M5 12h14" {...s}/>
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" {...s}>
+      <path d="M12 5v14M5 12h14"/>
     </svg>
   )
   if (id === 'house') return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-      <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" {...s}/>
-      <path d="M9 22V12h6v10" {...s}/>
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" {...s}>
+      <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2V9zM9 22V12h6v10"/>
     </svg>
   )
   return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-      <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2M12 11a4 4 0 100-8 4 4 0 000 8z" {...s}/>
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" {...s}>
+      <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2M12 11a4 4 0 100-8 4 4 0 000 8z"/>
     </svg>
   )
 }
 
-function CategorySection({ id, name, count, preview, palette, d, onOpen }) {
-  const color = CAT_COLORS[id] || palette.accent
+function CategorySection({ id, name, count, preview, color, palette, d, onOpen }) {
   return (
     <div
       style={{
@@ -160,9 +151,10 @@ function CategorySection({ id, name, count, preview, palette, d, onOpen }) {
           <div style={{
             width: 28, height: 28, borderRadius: 8,
             background: color + '22',
+            color,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
-            <CategoryIcon id={id} color={color} />
+            <CategoryIcon id={id} />
           </div>
           <span style={{ fontSize: 14, fontWeight: 700, color: palette.ink }}>{name}</span>
         </div>
@@ -214,58 +206,12 @@ function UpcomingSection({ upcomingGroups, palette, d }) {
   )
 }
 
-function GCalStrip({ gcalEnabled, connected, loading, onSignIn, onSignOut, onRefresh, palette, d }) {
-  if (!gcalEnabled) return null
-  const base = {
-    display: 'flex', alignItems: 'center', gap: 6,
-    padding: `0 ${d.pad}px 10px`,
-  }
-  if (loading) return (
-    <div style={base}>
-      <div style={{ width: 6, height: 6, borderRadius: '50%', background: palette.accent, opacity: 0.5 }} />
-      <span style={{ fontSize: 11, color: palette.inkMute }}>Syncing calendar…</span>
-    </div>
-  )
-  if (connected) return (
-    <div style={base}>
-      <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#4caf50' }} />
-      <span style={{ fontSize: 11, color: palette.inkMute }}>Google Calendar</span>
-      <button onClick={onRefresh} style={{ marginLeft: 'auto', fontSize: 11, color: palette.inkMute, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
-        refresh
-      </button>
-      <span style={{ fontSize: 11, color: palette.line }}>·</span>
-      <button onClick={onSignOut} style={{ fontSize: 11, color: palette.inkMute, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
-        disconnect
-      </button>
-    </div>
-  )
-  return (
-    <div style={{ padding: `0 ${d.pad}px 12px` }}>
-      <button
-        onClick={onSignIn}
-        style={{
-          display: 'inline-flex', alignItems: 'center', gap: 6,
-          padding: '5px 12px', borderRadius: 99,
-          background: 'none', border: `1px solid ${palette.line}`,
-          cursor: 'pointer', fontSize: 12, fontWeight: 600, color: palette.inkSoft,
-        }}
-      >
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-          <rect x="3" y="4" width="18" height="18" rx="2"/>
-          <path d="M16 2v4M8 2v4M3 10h18"/>
-        </svg>
-        Connect Google Calendar
-      </button>
-    </div>
-  )
-}
-
 export default function Home({
-  palette, d, persona, tasks, toggleTask, deleteTask, completedToday,
-  todayInfo, tomorrowInfo, tomorrowItems,
+  palette, d, persona, tasks, toggleTask, deleteTask, completedToday, categories,
+  todayInfo, tomorrowInfo,
   weekDays, weekRange, weekTotal, categoryStats, categoryData, upcomingGroups,
   gcalEnabled, gCalConnected, gCalLoading, onGCalSignIn, onGCalSignOut, onGCalRefresh,
-  onOpenVoice, onOpenSchool, onOpenReminder,
+  onOpenVoice, onOpenSchool, onOpenCategories,
 }) {
   const totalToday = tasks.length
   const upcomingCount = upcomingGroups.reduce((n, g) => n + g.count, 0)
@@ -287,7 +233,7 @@ export default function Home({
         </div>
       </div>
 
-      {/* 1b. Google Calendar connect strip */}
+      {/* 1b. Google Calendar strip */}
       <GCalStrip
         gcalEnabled={gcalEnabled}
         connected={gCalConnected}
@@ -298,16 +244,8 @@ export default function Home({
         palette={palette} d={d}
       />
 
-      {/* 2. Weekly calendar: strip + overview */}
+      {/* 2. Week strip */}
       <WeekStrip days={weekDays} palette={palette} d={d} />
-      <div style={{ margin: `0 ${d.pad}px ${d.gap}px` }}>
-        <WeekOverview
-          palette={palette} d={d}
-          weekTotal={weekTotal}
-          categoryStats={categoryStats}
-          weekRange={weekRange}
-        />
-      </div>
 
       {/* 3. Today's list */}
       <div style={{ padding: `0 ${d.pad}px`, marginBottom: d.gap }}>
@@ -325,24 +263,40 @@ export default function Home({
         </div>
         <TodayTable
           tasks={tasks} toggleTask={toggleTask} deleteTask={deleteTask}
-          palette={palette} d={d} persona={persona}
+          palette={palette} d={d} persona={persona} categories={categories}
         />
       </div>
 
-      {/* 4. Tomorrow's brief card */}
-      <TomorrowBriefCard
-        palette={palette} d={d} persona={persona}
-        tomorrowInfo={tomorrowInfo} tomorrowItems={tomorrowItems}
-        onOpen={onOpenReminder}
-      />
+      {/* 4. Week overview */}
+      <div style={{ margin: `0 ${d.pad}px ${d.gap}px` }}>
+        <WeekOverview
+          palette={palette} d={d}
+          weekTotal={weekTotal}
+          categoryStats={categoryStats}
+          weekRange={weekRange}
+        />
+      </div>
 
-      {/* 5. Upcoming days (collapsible, starts closed) */}
+      {/* 5. Upcoming days — now includes tomorrow */}
       <CollapsibleSection id="upcoming" title="Upcoming days" badge={upcomingCount} palette={palette} d={d}>
         <UpcomingSection upcomingGroups={upcomingGroups} palette={palette} d={d} />
       </CollapsibleSection>
 
-      {/* 6. By category (collapsible, starts closed) */}
-      <CollapsibleSection id="categories" title="By category" badge={openCatCount} palette={palette} d={d}>
+      {/* 6. By category */}
+      <CollapsibleSection
+        id="categories" title="By category" badge={openCatCount} palette={palette} d={d}
+        action={
+          <button
+            onClick={onOpenCategories}
+            style={{
+              fontSize: 11, fontWeight: 600, color: palette.inkMute,
+              background: 'none', border: 'none', cursor: 'pointer', padding: '4px 0',
+            }}
+          >
+            Manage
+          </button>
+        }
+      >
         <div style={{ paddingBottom: d.gap }}>
           {categoryData.map(cat => (
             <CategorySection
