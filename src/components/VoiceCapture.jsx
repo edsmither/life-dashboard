@@ -1,11 +1,38 @@
 import { useState, useEffect, useRef } from 'react'
 import { fmt } from '../data/appData'
+import { getTodayInfo, getTomorrowInfo, addDays } from '../data/dateUtils'
 
 const EXAMPLES = [
   "{p}'s dentist appointment Thursday 2pm",
   'Bring blanket for movie night Friday',
   'Pay yearbook fee, due today, $28',
 ]
+
+function dayToDateISO(dayStr) {
+  const today = getTodayInfo()
+  const tomorrow = getTomorrowInfo()
+  if (!dayStr) return today.dateISO
+  const lower = dayStr.toLowerCase()
+  if (lower === 'today')    return today.dateISO
+  if (lower === 'tomorrow') return tomorrow.dateISO
+  const days = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday']
+  const target = days.indexOf(lower)
+  if (target === -1) return today.dateISO
+  const current = new Date(today.dateISO + 'T12:00:00').getDay()
+  let diff = target - current
+  if (diff <= 0) diff += 7
+  return addDays(today.dateISO, diff)
+}
+
+function parseTimeMin(timeStr) {
+  if (!timeStr) return null
+  const m = timeStr.match(/(\d{1,2})(?::(\d{2}))?\s*(am|pm)/i)
+  if (!m) return null
+  let h = parseInt(m[1]); const min = parseInt(m[2] || '0'); const ap = m[3].toLowerCase()
+  if (ap === 'pm' && h !== 12) h += 12
+  if (ap === 'am' && h === 12) h = 0
+  return h * 60 + min
+}
 
 function parseTranscript(text) {
   const lower = text.toLowerCase()
@@ -36,7 +63,7 @@ function parseTranscript(text) {
   }
 }
 
-export default function VoiceCapture({ palette, d, persona, onClose }) {
+export default function VoiceCapture({ palette, d, persona, onClose, onAddTask }) {
   const [phase, setPhase] = useState('idle') // idle | listening | result
   const [transcript, setTranscript] = useState('')
   const [parsed, setParsed] = useState(null)
@@ -77,7 +104,23 @@ export default function VoiceCapture({ palette, d, persona, onClose }) {
   }
 
   function handleSave() {
-    // In the prototype this is where a real task would be added
+    if (parsed && onAddTask) {
+      onAddTask({
+        id: `voice_${Date.now()}`,
+        title: transcript,
+        dateISO: dayToDateISO(parsed.day),
+        time: parsed.time || null,
+        timeMin: parseTimeMin(parsed.time),
+        cat: parsed.cat.toLowerCase(),
+        done: false,
+        sub: null,
+        flag: null,
+        money: parsed.money || null,
+        dueByEOD: !parsed.time,
+        offset: null,
+        source: 'voice',
+      })
+    }
     onClose()
   }
 

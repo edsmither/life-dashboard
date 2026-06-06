@@ -53,6 +53,9 @@ export default function App() {
   const d = densityScale[density]
 
   // ── Task mutations ───────────────────────────────────────
+  function addTask(task) {
+    setTasks(prev => [...prev, task])
+  }
   function toggleTask(id) {
     setTasks(prev => prev.map(t => t.id === id ? { ...t, done: !t.done } : t))
   }
@@ -153,7 +156,7 @@ export default function App() {
       overflow: 'hidden', display: 'flex', flexDirection: 'column',
     }}>
       {screen === 'voice' && (
-        <VoiceCapture {...ctx} onClose={() => setScreen('home')} />
+        <VoiceCapture {...ctx} onClose={() => setScreen('home')} onAddTask={addTask} />
       )}
       {screen === 'school' && (
         <SchoolDrilldown {...ctx} schoolTasks={schoolTasks} todayISO={todayISO} onBack={() => setScreen('home')} />
