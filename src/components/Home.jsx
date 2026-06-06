@@ -208,10 +208,10 @@ function UpcomingSection({ upcomingGroups, palette, d }) {
 
 export default function Home({
   palette, d, persona, tasks, toggleTask, deleteTask, completedToday, categories,
-  todayInfo, tomorrowInfo,
+  todayInfo, tomorrowInfo, tomorrowItems,
   weekDays, weekRange, weekTotal, categoryStats, categoryData, upcomingGroups,
   gcalEnabled, gCalConnected, gCalLoading, onGCalSignIn, onGCalSignOut, onGCalRefresh,
-  onOpenVoice, onOpenSchool, onOpenCategories,
+  onOpenVoice, onOpenSchool, onOpenCategories, onOpenReminder,
 }) {
   const totalToday = tasks.length
   const upcomingCount = upcomingGroups.reduce((n, g) => n + g.count, 0)
@@ -278,7 +278,25 @@ export default function Home({
       </div>
 
       {/* 5. Upcoming days — now includes tomorrow */}
-      <CollapsibleSection id="upcoming" title="Upcoming days" badge={upcomingCount} palette={palette} d={d}>
+      <CollapsibleSection
+        id="upcoming" title="Upcoming days" badge={upcomingCount} palette={palette} d={d}
+        action={
+          <button
+            onClick={onOpenReminder}
+            title="Tomorrow prep"
+            style={{
+              width: 28, height: 28, borderRadius: '50%',
+              background: tomorrowItems?.length > 0 ? palette.accent + '18' : 'none',
+              border: 'none', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={tomorrowItems?.length > 0 ? palette.accent : palette.inkMute} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/>
+            </svg>
+          </button>
+        }
+      >
         <UpcomingSection upcomingGroups={upcomingGroups} palette={palette} d={d} />
       </CollapsibleSection>
 

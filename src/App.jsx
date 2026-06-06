@@ -10,6 +10,7 @@ import Home from './components/Home'
 import VoiceCapture from './components/VoiceCapture'
 import SchoolDrilldown from './components/SchoolDrilldown'
 import CategoriesScreen from './components/CategoriesScreen'
+import ReminderSheet from './components/ReminderSheet'
 
 const SETTINGS_KEY = 'lifedash.settings'
 const CATS_KEY     = 'lifedash.categories'
@@ -33,6 +34,7 @@ function seedToTasks() {
 export default function App() {
   const saved = loadSettings()
   const [screen, setScreen] = useState('home')
+  const [reminderOpen, setReminderOpen] = useState(false)
   const [mode]      = useState(saved.mode     || 'light')
   const [density]   = useState(saved.density  || 'compact')
   const [themeName] = useState(saved.theme    || 'sage')
@@ -139,6 +141,9 @@ export default function App() {
       count: dayTasks.length,
     }))
 
+  const tomorrowTasks = allItems.filter(t => t.dateISO === tomorrowISO)
+  const tomorrowItems = tomorrowTasks.map(t => ({ id: t.id, label: fmt(t.title, persona) }))
+
   const weekDays  = getCurrentWeek(todayISO, allItems)
   const weekRange = getWeekRangeLabel(todayISO)
   const completedToday = todayTasks.filter(t => t.done).length
@@ -191,9 +196,19 @@ export default function App() {
           onGCalSignIn={gCalSignIn}
           onGCalSignOut={gCalSignOut}
           onGCalRefresh={gCalRefresh}
+          tomorrowItems={tomorrowItems}
           onOpenVoice={() => setScreen('voice')}
           onOpenSchool={() => setScreen('school')}
           onOpenCategories={() => setScreen('categories')}
+          onOpenReminder={() => setReminderOpen(true)}
+        />
+      )}
+      {reminderOpen && (
+        <ReminderSheet
+          {...ctx}
+          tomorrowInfo={tomorrowInfo}
+          tomorrowItems={tomorrowItems}
+          onClose={() => setReminderOpen(false)}
         />
       )}
     </div>
