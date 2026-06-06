@@ -5,6 +5,7 @@ import {
   getTodayInfo, getTomorrowInfo, addDays,
   getWeekBounds, getCurrentWeek, getWeekRangeLabel, formatDayLabel,
 } from './data/dateUtils'
+import { useGoogleCalendar } from './hooks/useGoogleCalendar'
 import Home from './components/Home'
 import VoiceCapture from './components/VoiceCapture'
 import SchoolDrilldown from './components/SchoolDrilldown'
@@ -13,19 +14,16 @@ import ReminderSheet from './components/ReminderSheet'
 const SETTINGS_KEY = 'lifedash.settings'
 const CATS = ['medical', 'school', 'house', 'personal']
 const CAT_LABELS = { medical: 'Medical', school: 'School', house: 'House', personal: 'Personal' }
+const GCAL_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || ''
 
 function loadSettings() {
   try { return JSON.parse(localStorage.getItem(SETTINGS_KEY)) || {} }
   catch { return {} }
 }
 
-// Resolve seed tasks to real ISO dates once at startup
 function seedToTasks() {
   const todayISO = getTodayInfo().dateISO
-  return SEED_TASKS.map(t => {
-    const dateISO = addDays(todayISO, t.offset)
-    return { ...t, dateISO }
-  })
+  return SEED_TASKS.map(t => ({ ...t, dateISO: addDays(todayISO, t.offset) }))
 }
 
 export default function App() {
@@ -38,10 +36,18 @@ export default function App() {
   const [persona] = useState(saved.persona || 'Ava')
   const [tasks, setTasks] = useState(seedToTasks)
 
+  const {
+    isSignedIn: gCalConnected,
+    events: calendarEvents,
+    loading: gCalLoading,
+    signIn: gCalSignIn,
+    signOut: gCalSignOut,
+    refresh: gCalRefresh,
+  } = useGoogleCalendar(GCAL_CLIENT_ID)
+
   const palette = useMemo(() => resolveTheme(themeName, mode), [themeName, mode])
   const d = densityScale[density]
 
-  // ── Mutations ───────────────────────────────────────────
   function toggleTask(id) {
     setTasks(prev => prev.map(t => t.id === id ? { ...t, done: !t.done } : t))
   }
@@ -49,33 +55,37 @@ export default function App() {
     setTasks(prev => prev.filter(t => t.id !== id))
   }
 
-  // ── Date anchors ────────────────────────────────────────
-  const todayInfo = getTodayInfo()
+  const todayInfo    = getTodayInfo()
   const tomorrowInfo = getTomorrowInfo()
-  const todayISO = todayInfo.dateISO
-  const tomorrowISO = tomorrowInfo.dateISO
+  const todayISO     = todayInfo.dateISO
+  const tomorrowISO  = tomorrowInfo.dateISO
   const { weekStartISO, weekEndISO } = getWeekBounds(todayISO)
 
-  // ── Derived task views ──────────────────────────────────
-  const todayTasks    = tasks.filter(t => t.dateISO === todayISO)
-  const tomorrowTasks = tasks.filter(t => t.dateISO === tomorrowISO)
-  const weekTasks     = tasks.filter(t => t.dateISO >= weekStartISO && t.dateISO <= weekEndISO)
-  const schoolTasks   = tasks.filter(t => t.cat === 'school')
+  // Local tasks + Google Calendar events merged for all time-based views
+  const allItems = useMemo(() => [
+    ...tasks,
+    ...calendarEvents.filter(ev => !tasks.some(t => t.id === ev.id)),
+  ], [tasks, calendarEvents])
 
-  // ── Week overview stats (live) ──────────────────────────
+  const todayTasks    = allItems.filter(t => t.dateISO === todayISO)
+  const tomorrowTasks = allItems.filter(t => t.dateISO === tomorrowISO)
+
+  // Category stats + school drilldown use local tasks only
+  const schoolTasks    = tasks.filter(t => t.cat === 'school')
+  const localWeekTasks = tasks.filter(t => t.dateISO >= weekStartISO && t.dateISO <= weekEndISO)
+
   const categoryStats = Object.fromEntries(
     CATS.map(cat => [cat, {
-      total: weekTasks.filter(t => t.cat === cat).length,
-      done:  weekTasks.filter(t => t.cat === cat && t.done).length,
+      total: localWeekTasks.filter(t => t.cat === cat).length,
+      done:  localWeekTasks.filter(t => t.cat === cat && t.done).length,
     }])
   )
   const weekTotal = {
-    expected:  weekTasks.length,
-    completed: weekTasks.filter(t => t.done).length,
+    expected:  localWeekTasks.length,
+    completed: localWeekTasks.filter(t => t.done).length,
   }
 
-  // ── Category section data (open/pending tasks from today forward) ──
-  const openFutureTasks = tasks.filter(t => t.dateISO >= todayISO && !t.done)
+  const openFutureTasks = allItems.filter(t => t.dateISO >= todayISO && !t.done)
   const categoryData = CATS.map(cat => {
     const catTasks = openFutureTasks.filter(t => t.cat === cat)
     return {
@@ -88,8 +98,7 @@ export default function App() {
     }
   })
 
-  // ── Upcoming groups (days after today, up to 5 days out) ──
-  const futureTasks = tasks.filter(t => t.dateISO > todayISO)
+  const futureTasks = allItems.filter(t => t.dateISO > todayISO)
   const dateMap = {}
   futureTasks.forEach(t => {
     if (!dateMap[t.dateISO]) dateMap[t.dateISO] = []
@@ -105,13 +114,9 @@ export default function App() {
       count: dayTasks.length,
     }))
 
-  // ── Tomorrow brief items ────────────────────────────────
   const tomorrowItems = tomorrowTasks.map(t => ({ id: t.id, label: fmt(t.title, persona) }))
-
-  // ── Week strip ──────────────────────────────────────────
-  const weekDays  = getCurrentWeek(todayISO, tasks)
+  const weekDays  = getCurrentWeek(todayISO, allItems)
   const weekRange = getWeekRangeLabel(todayISO)
-
   const completedToday = todayTasks.filter(t => t.done).length
 
   const ctx = { palette, d, persona, mode, toggleTask, deleteTask }
@@ -142,6 +147,12 @@ export default function App() {
           categoryStats={categoryStats}
           categoryData={categoryData}
           upcomingGroups={upcomingGroups}
+          gcalEnabled={!!GCAL_CLIENT_ID}
+          gCalConnected={gCalConnected}
+          gCalLoading={gCalLoading}
+          onGCalSignIn={gCalSignIn}
+          onGCalSignOut={gCalSignOut}
+          onGCalRefresh={gCalRefresh}
           onOpenVoice={() => setScreen('voice')}
           onOpenSchool={() => setScreen('school')}
           onOpenReminder={() => setReminderOpen(true)}

@@ -214,10 +214,57 @@ function UpcomingSection({ upcomingGroups, palette, d }) {
   )
 }
 
+function GCalStrip({ gcalEnabled, connected, loading, onSignIn, onSignOut, onRefresh, palette, d }) {
+  if (!gcalEnabled) return null
+  const base = {
+    display: 'flex', alignItems: 'center', gap: 6,
+    padding: `0 ${d.pad}px 10px`,
+  }
+  if (loading) return (
+    <div style={base}>
+      <div style={{ width: 6, height: 6, borderRadius: '50%', background: palette.accent, opacity: 0.5 }} />
+      <span style={{ fontSize: 11, color: palette.inkMute }}>Syncing calendar…</span>
+    </div>
+  )
+  if (connected) return (
+    <div style={base}>
+      <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#4caf50' }} />
+      <span style={{ fontSize: 11, color: palette.inkMute }}>Google Calendar</span>
+      <button onClick={onRefresh} style={{ marginLeft: 'auto', fontSize: 11, color: palette.inkMute, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+        refresh
+      </button>
+      <span style={{ fontSize: 11, color: palette.line }}>·</span>
+      <button onClick={onSignOut} style={{ fontSize: 11, color: palette.inkMute, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+        disconnect
+      </button>
+    </div>
+  )
+  return (
+    <div style={{ padding: `0 ${d.pad}px 12px` }}>
+      <button
+        onClick={onSignIn}
+        style={{
+          display: 'inline-flex', alignItems: 'center', gap: 6,
+          padding: '5px 12px', borderRadius: 99,
+          background: 'none', border: `1px solid ${palette.line}`,
+          cursor: 'pointer', fontSize: 12, fontWeight: 600, color: palette.inkSoft,
+        }}
+      >
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="3" y="4" width="18" height="18" rx="2"/>
+          <path d="M16 2v4M8 2v4M3 10h18"/>
+        </svg>
+        Connect Google Calendar
+      </button>
+    </div>
+  )
+}
+
 export default function Home({
   palette, d, persona, tasks, toggleTask, deleteTask, completedToday,
   todayInfo, tomorrowInfo, tomorrowItems,
   weekDays, weekRange, weekTotal, categoryStats, categoryData, upcomingGroups,
+  gcalEnabled, gCalConnected, gCalLoading, onGCalSignIn, onGCalSignOut, onGCalRefresh,
   onOpenVoice, onOpenSchool, onOpenReminder,
 }) {
   const totalToday = tasks.length
@@ -239,6 +286,17 @@ export default function Home({
           </span>
         </div>
       </div>
+
+      {/* 1b. Google Calendar connect strip */}
+      <GCalStrip
+        gcalEnabled={gcalEnabled}
+        connected={gCalConnected}
+        loading={gCalLoading}
+        onSignIn={onGCalSignIn}
+        onSignOut={onGCalSignOut}
+        onRefresh={onGCalRefresh}
+        palette={palette} d={d}
+      />
 
       {/* 2. Weekly calendar: strip + overview */}
       <WeekStrip days={weekDays} palette={palette} d={d} />

@@ -2,7 +2,7 @@ import { useState, useRef } from 'react'
 import { fmt } from '../data/appData'
 
 const catColors = {
-  school: '#6b8e6e', medical: '#5b7a91', house: '#b78850', personal: '#8a5e7d',
+  school: '#6b8e6e', medical: '#5b7a91', house: '#b78850', personal: '#8a5e7d', calendar: '#4285f4',
 }
 
 function SortIcon({ active, dir }) {
@@ -17,6 +17,7 @@ function SortIcon({ active, dir }) {
 }
 
 function TaskRow({ task, toggleTask, deleteTask, palette, persona }) {
+  const isGcal = task.source === 'google'
   const color = catColors[task.cat] || palette.accent
   const timeLabel = task.time || (task.dueByEOD ? 'EOD' : '—')
   const [swipeX, setSwipeX] = useState(0)
@@ -24,40 +25,44 @@ function TaskRow({ task, toggleTask, deleteTask, palette, persona }) {
   const THRESHOLD = 60
 
   function onTouchStart(e) {
+    if (isGcal) return
     touchStartX.current = e.touches[0].clientX
   }
   function onTouchMove(e) {
+    if (isGcal || touchStartX.current === null) return
     const dx = e.touches[0].clientX - touchStartX.current
     if (dx < 0) setSwipeX(Math.max(dx, -THRESHOLD - 20))
   }
   function onTouchEnd() {
+    if (isGcal) return
     if (swipeX < -THRESHOLD / 2) setSwipeX(-THRESHOLD)
     else setSwipeX(0)
     touchStartX.current = null
   }
 
-  const revealed = swipeX <= -THRESHOLD / 2
+  const revealed = !isGcal && swipeX <= -THRESHOLD / 2
 
   return (
     <tr style={{ position: 'relative', opacity: task.done ? 0.55 : 1, transition: 'opacity 0.15s' }}>
-      {/* Delete zone (revealed on swipe-left) */}
+      {/* Delete zone (revealed on swipe-left, local tasks only) */}
       <td
         colSpan={5}
         style={{ padding: 0, position: 'relative', overflow: 'hidden' }}
       >
         <div style={{ position: 'relative', overflow: 'hidden' }}>
-          {/* Red delete background */}
-          <div style={{
-            position: 'absolute', right: 0, top: 0, bottom: 0,
-            width: THRESHOLD + 20,
-            background: '#e05555',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            borderRadius: '0 8px 8px 0',
-          }}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-              <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </div>
+          {!isGcal && (
+            <div style={{
+              position: 'absolute', right: 0, top: 0, bottom: 0,
+              width: THRESHOLD + 20,
+              background: '#e05555',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              borderRadius: '0 8px 8px 0',
+            }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </div>
+          )}
 
           {/* Row content — slides left on swipe */}
           <div
@@ -66,9 +71,9 @@ function TaskRow({ task, toggleTask, deleteTask, palette, persona }) {
               transform: `translateX(${swipeX}px)`,
               transition: touchStartX.current ? 'none' : 'transform 0.2s ease',
               background: palette.surface,
-              cursor: 'pointer',
+              cursor: isGcal ? 'default' : 'pointer',
             }}
-            onClick={() => { if (!revealed) toggleTask(task.id) }}
+            onClick={() => { if (!revealed && !isGcal) toggleTask(task.id) }}
             onTouchStart={onTouchStart}
             onTouchMove={onTouchMove}
             onTouchEnd={onTouchEnd}
@@ -115,7 +120,7 @@ function TaskRow({ task, toggleTask, deleteTask, palette, persona }) {
               </div>
             </div>
 
-            {/* Category pill + delete button */}
+            {/* Category pill + action */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '10px 0 10px 4px', flexShrink: 0 }}>
               <span style={{
                 fontSize: 10, fontWeight: 700, color,
@@ -124,30 +129,37 @@ function TaskRow({ task, toggleTask, deleteTask, palette, persona }) {
                 textTransform: 'uppercase', letterSpacing: '0.06em',
                 whiteSpace: 'nowrap',
               }}>
-                {task.cat}
+                {isGcal ? 'gcal' : task.cat}
               </span>
-              <button
-                onClick={e => { e.stopPropagation(); deleteTask(task.id) }}
-                style={{
-                  width: 24, height: 24, borderRadius: '50%', flexShrink: 0,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  background: 'none', border: 'none', cursor: 'pointer',
-                  color: palette.inkMute, opacity: 0.6,
-                  transition: 'opacity 0.15s, color 0.15s',
-                }}
-                onMouseEnter={e => { e.currentTarget.style.opacity = 1; e.currentTarget.style.color = '#e05555' }}
-                onMouseLeave={e => { e.currentTarget.style.opacity = 0.6; e.currentTarget.style.color = palette.inkMute }}
-                aria-label="Delete task"
-              >
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
-                  <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+              {isGcal ? (
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.7, flexShrink: 0 }}>
+                  <rect x="3" y="4" width="18" height="18" rx="2"/>
+                  <path d="M16 2v4M8 2v4M3 10h18"/>
                 </svg>
-              </button>
+              ) : (
+                <button
+                  onClick={e => { e.stopPropagation(); deleteTask(task.id) }}
+                  style={{
+                    width: 24, height: 24, borderRadius: '50%', flexShrink: 0,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    background: 'none', border: 'none', cursor: 'pointer',
+                    color: palette.inkMute, opacity: 0.6,
+                    transition: 'opacity 0.15s, color 0.15s',
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.opacity = 1; e.currentTarget.style.color = '#e05555' }}
+                  onMouseLeave={e => { e.currentTarget.style.opacity = 0.6; e.currentTarget.style.color = palette.inkMute }}
+                  aria-label="Delete task"
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+                    <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                  </svg>
+                </button>
+              )}
             </div>
           </div>
 
           {/* Swipe-delete confirm tap */}
-          {revealed && (
+          {!isGcal && revealed && (
             <button
               onClick={() => deleteTask(task.id)}
               style={{
